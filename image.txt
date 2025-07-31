@@ -1,0 +1,28 @@
+import {Container, getRandom} from "@cloudflare/containers"
+
+const NUM_INSTANCES = 3 
+
+export class MyContainer extends Container {
+	defaultPort = 8080;
+	...
+}
+
+export default {
+	async fetch(request, env, ctx): Promise<Response> {
+		console.log(`Worker received request at ${(new Date()).toString()}`)
+      
+        // Load balancing the requests based on instances
+		const container = await getRandom(env.MY_CONTAINER, NUM_INSTANCES) 
+
+		try {
+            // Starting the instance (if not yet started)
+			await container.startAndWaitForPorts()
+          
+		} catch (e){
+			console.log(`Worker couldn't start container at ${(new Date()).toString()}: ${e}`)
+		}
+      
+        // Routing the request to the container
+		return container.fetch(request)
+	},
+} satisfies ExportedHandler<Env>;
